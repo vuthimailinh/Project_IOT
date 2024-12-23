@@ -42,7 +42,7 @@ const rawData = ref([]);
 const listDevices = ref([]);
 const value = ref("");
 const device = ref()
-
+const accessToken = localStorage.getItem('accessToken');
 const showToast = (severity, summary, detail) => {
     toast.add({ severity: severity, summary: summary, detail: detail, life: 5000 });
 };
@@ -57,10 +57,21 @@ const setChartDataWeekly = async () => {
     const response = await api.weeklyData(device.value.deviceId);
     rawData.value = response;
 }
+if (typeof global === 'undefined') { var global = window; }
 
 const connectWebSocket = () => {
+    console.log('Access Token:', accessToken); // Log the access token to ensure it's available
+
+    if (!accessToken) {
+        console.error('Access Token is not available');
+        showToast('error', 'Authorization Error', 'Access Token is not available.');
+        return;
+    }
     stompClient.value = new StompJs.Client({
         brokerURL: import.meta.env.VITE_WEB_SOCKET,
+        connectHeaders: {
+            Authorization: `Bearer ${accessToken}`
+        },
         onConnect: () => {
             console.log('WebSocket connected');
             stompClient.value.subscribe('/topic/alert', (message) => {
@@ -74,8 +85,10 @@ const connectWebSocket = () => {
             showToast('error', 'Connection Error', 'Failed to connect to WebSocket server.');
         },
     });
+
     stompClient.value.activate();
 };
+
 
 const setChartData = () => {
     const documentStyle = getComputedStyle(document.documentElement);
